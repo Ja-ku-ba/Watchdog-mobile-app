@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:watchdog/views/auth/login.dart';
-import 'package:watchdog/views/base/home.dart';
 import 'package:watchdog/services/auth.dart';
 import 'package:watchdog/components/snackBars.dart';
 

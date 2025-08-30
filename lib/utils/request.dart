@@ -1,11 +1,14 @@
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:watchdog/services/auth.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:watchdog/services/auth.dart';
 
-const String baseUrl = 'http://192.168.0.22:8000/';
+
+// const String baseUrl = 'http://192.168.0.22:8000/';
+String baseUrl = dotenv.env['BASE_URL']!;
 
 class RequestClient {
   late Dio _dio;

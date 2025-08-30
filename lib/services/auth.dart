@@ -1,14 +1,17 @@
 import 'dart:async';
-import 'package:watchdog/main.dart';
 import 'dart:convert';
+
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:watchdog/main.dart';
+
 
 class AuthService {
   static const int accessTokenLifespanInMinutes = 60;
-  static const String baseUrl = "http://192.168.0.22:8000";
+  static final String baseUrl = dotenv.env['BASE_URL']!;
 
   static Future<({bool success, String? error})> register(String email, String password, String username) async {
     try {
@@ -56,7 +59,7 @@ class AuthService {
         await prefs.setString('refresh_token', refreshToken);
         AuthService.tokenRefresher();
         return (success: true, error: null);
-      } else if (data["detail"]) {
+      } else if (data["detail"] != null && data["detail"].isNotEmpty) {
         return (success: false, error: data['detail'] as String ?? 'Coś poszło nie tak, pracujemy nad tym');
       }
     } catch (e) {

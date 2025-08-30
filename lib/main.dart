@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:watchdog/components/double_back_bo_exit.dart';
 import 'package:watchdog/views/auth/login.dart';
@@ -10,7 +11,18 @@ import 'package:watchdog/views/videos/fullscreen_video.dart';
 import 'package:watchdog/views/videos/video.dart';
 import 'services/auth.dart';
 
-void main() => runApp(MyApp());
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // Ensure Flutter is initialized
+  try {
+    await dotenv.load(fileName: ".env"); // Load environment variables
+  } catch (e) {
+    throw Exception('Error loading .env file: $e'); // Print error if any
+  }
+  runApp(MyApp());
+}
+
+
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 class MyApp extends StatelessWidget {
   @override
@@ -19,7 +31,6 @@ class MyApp extends StatelessWidget {
       DeviceOrientation.portraitUp,
     ]);
 
-    // WidgetsFlutterBinding.ensureInitialized();
     return MaterialApp(
       title: 'Watchdog, Twój system monitorowania',
       // theme: ThemeData(primarySwatch: Colors.blue),
@@ -69,7 +80,6 @@ class _AuthGateState extends State<AuthGate> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return Scaffold(body: Center(child: CircularProgressIndicator()));
-    // return Scaffold(body: Center(child: CircularProgressIndicator()));
     return _loggedIn ? HomePage() : LoginPage();
   }
 }

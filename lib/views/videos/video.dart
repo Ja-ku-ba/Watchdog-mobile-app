@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:watchdog/layouts/base/loged_in_layout.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:video_player/video_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:watchdog/models/video.dart';
@@ -63,6 +64,7 @@ class _VideoStreamerState extends State<VideoStreamer> {
   Timer? _bufferCheckTimer;
   Duration _lastPosition = Duration.zero;
   int _bufferCheckCount = 0;
+  static final String baseUrl = dotenv.env['BASE_URL']!;
 
   @override
   void initState() {
@@ -90,7 +92,7 @@ class _VideoStreamerState extends State<VideoStreamer> {
       await _controller?.dispose();
 
       _controller = VideoPlayerController.networkUrl(
-        Uri.parse('http://192.168.0.22:8000/videos/${videoObj.hash}'),
+        Uri.parse('${baseUrl}/videos/${videoObj.hash}'),
         httpHeaders: {
           'Authorization': 'Bearer $token',
           'Accept': 'video/*',

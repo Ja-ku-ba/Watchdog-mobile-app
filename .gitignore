@@ -358,3 +358,4 @@ Desktop.ini
 
 # Other
 *.log
+.env
