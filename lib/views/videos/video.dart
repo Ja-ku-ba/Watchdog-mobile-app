@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:intl/intl.dart';
 
 import 'package:flutter/material.dart';
 import 'package:watchdog/layouts/base/loged_in_layout.dart';
@@ -98,6 +99,7 @@ class _VideoStreamerState extends State<VideoStreamer> {
           'Accept': 'video/*',
         },
       );
+      VideoPlayerManager().registerController(_controller!);
 
       _controller!.addListener(_videoPlayerListener);
 
@@ -212,6 +214,26 @@ class _VideoStreamerState extends State<VideoStreamer> {
     _controller!.seekTo(targetPosition);
   }
 
+  String formatDate(DateTime date) {
+    return DateFormat("HH:mm, dd.MM.yyyy").format(date);
+  }
+
+  String formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+
+    if (hours > 0) {
+      return '${twoDigits(hours)}h ${twoDigits(minutes)}min ${twoDigits(seconds)}s';
+    } else if (minutes > 0) {
+      return '${twoDigits(minutes)}min ${twoDigits(seconds)}s';
+    } else {
+      return '${twoDigits(seconds)}s';
+    }
+  }
+
   void _togglePlayPause() {
     if (_controller == null || !_controller!.value.isInitialized) return;
 
@@ -226,8 +248,13 @@ class _VideoStreamerState extends State<VideoStreamer> {
   void dispose() {
     _hideTimer?.cancel();
     _bufferCheckTimer?.cancel();
-    _controller?.removeListener(_videoPlayerListener);
-    _controller?.dispose();
+
+    if (_controller != null) {
+      VideoPlayerManager().unregisterController(_controller!);
+      _controller!.removeListener(_videoPlayerListener);
+      _controller!.pause();
+      _controller!.dispose();
+    }
     super.dispose();
   }
 
@@ -392,26 +419,29 @@ class _VideoStreamerState extends State<VideoStreamer> {
 
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.all(16),
             children: [
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.video_library),
-                  title: Text('Video: ${videoObj.hash}'),
-                  subtitle: Text('Hash: ${videoObj.hash}'),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.info),
-                  title: const Text('Informacje o video'),
+                  title: Text(
+                    '${formatDate(videoObj.recordedAt)}, ${videoObj.camera}',
+                  ),
                   subtitle: Text(
-                    'Rozdzielczość: ${_controller?.value.size.width.toInt()}x${_controller?.value.size.height.toInt()}\n'
-                        'Długość: ${_formatDuration(_controller?.value.duration ?? Duration.zero)}',
+                    '${videoObj.type}, długość nagrania: ${formatDuration(videoObj.recordLength)}',
                   ),
                 ),
               ),
+              // const SizedBox(height: 8),
+              // Card(
+              //   child: ListTile(
+              //     leading: const Icon(Icons.info),
+              //     title: const Text('Informacje o video'),
+              //     subtitle: Text(
+              //       'Rozdzielczość: ${_controller?.value.size.width.toInt()}x${_controller?.value.size.height.toInt()}\n'
+              //           'Długość: ${_formatDuration(_controller?.value.duration ?? Duration.zero)}',
+              //     ),
+              //   ),
+              // ),
             ],
           ),
         ),

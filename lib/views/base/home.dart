@@ -46,7 +46,7 @@ class _HomePageState extends State<HomePage> {
     await client.initialize();
 
     try {
-      final response = await client.get('videos/get-videos');
+      final response = await client.get('/videos/get-videos');
       videos.addAll(
         (response.data as List).map((json) => Video.fromJson(json)).toList(),
       );
@@ -65,7 +65,7 @@ class _HomePageState extends State<HomePage> {
   Future<Uint8List> downloadThumbnail(String hash) async {
     final client = RequestClient();
     await client.initialize();
-    return await client.getImage('videos/thumbnail/$hash');
+    return await client.getImage('/videos/thumbnail/$hash');
   }
 
   String formatDate(DateTime date) {
@@ -80,9 +80,11 @@ class _HomePageState extends State<HomePage> {
     final seconds = duration.inSeconds.remainder(60);
 
     if (hours > 0) {
-      return '${twoDigits(hours)}:${twoDigits(minutes)}:${twoDigits(seconds)}';
+      return '${twoDigits(hours)}h ${twoDigits(minutes)}min ${twoDigits(seconds)}s';
+    } else if (minutes > 0) {
+      return '${twoDigits(minutes)}min ${twoDigits(seconds)}s';
     } else {
-      return '${twoDigits(minutes)}:${twoDigits(seconds)}';
+      return '${twoDigits(seconds)}s';
     }
   }
 
@@ -145,6 +147,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           subtitle: Text(
                             '${videos[index].type}, długość nagrania: ${formatDuration(videos[index].recordLength)}',
+                            // '${videos[index].type}, długość nagrania: ${formatDuration(videos[index].recordLength)}, hash:${videos[index].hash}',
                           ),
                           onTap: () => {
                             Navigator.of(context).pushReplacementNamed(
