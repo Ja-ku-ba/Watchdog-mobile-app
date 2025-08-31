@@ -35,7 +35,7 @@ class _RegisterPageState extends State<RegisterPage> {
           content: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(child: Text('Wypełnij oba pola formularza')),
+              Expanded(child: Text('Wypełnij wszystkie pola formularza')),
               IconButton(
                   onPressed: () {
                     ScaffoldMessenger.of(context).hideCurrentSnackBar();

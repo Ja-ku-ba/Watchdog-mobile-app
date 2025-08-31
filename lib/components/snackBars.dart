@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 void showErrorSnackBar(BuildContext context, String message) {
+  // ScaffoldMessenger.of(context).clearSnackBars();
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       backgroundColor: Colors.red,

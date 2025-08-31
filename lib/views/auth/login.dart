@@ -33,7 +33,7 @@ class _LoginPageState extends State<LoginPage> {
     final password = passwordController.text.trim();
 
     if (email.isEmpty | password.isEmpty) {
-      showErrorSnackBar(context, "Niepoprawny format adresu e-mail");
+      showErrorSnackBar(context, "Wypełnij wszystkie pola formularza");
       return;
     }
 
@@ -46,10 +46,11 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    ScaffoldMessenger.of(context).clearSnackBars();
     final (success: status, error: message) = await AuthService.login(email, password);
     if (status) {
       Navigator.of(context).pushReplacementNamed('/home');
-    } else if(!status && message != null) {
+    } else if(message != null) {
       showErrorSnackBar(context, message);
     } else {
       showErrorSnackBar(context, "Coś ewidentnie, poszło nie tak");
