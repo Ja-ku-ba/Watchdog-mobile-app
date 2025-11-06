@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:media_kit/media_kit.dart';
 
 import 'package:watchdog/components/double_back_bo_exit.dart';
 import 'package:watchdog/views/auth/login.dart';
 import 'package:watchdog/views/auth/register.dart';
 import 'package:watchdog/views/base/home.dart';
-import 'package:watchdog/views/tests.dart';
-import 'package:watchdog/views/videos/fullscreen_video.dart';
 import 'package:watchdog/views/videos/video.dart';
 import 'services/auth.dart';
 
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Ensure Flutter is initialized
+  WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
+
   try {
-    await dotenv.load(fileName: ".env"); // Load environment variables
+    // Load environment variables
+    await dotenv.load(fileName: ".env");
   } catch (e) {
-    throw Exception('Error loading .env file: $e'); // Print error if any
+    throw Exception('Error loading .env file: $e');
   }
   runApp(MyApp());
 }
@@ -32,8 +34,7 @@ class MyApp extends StatelessWidget {
     ]);
 
     return MaterialApp(
-      title: 'Watchdog, Twój system monitorowania',
-      // theme: ThemeData(primarySwatch: Colors.blue),
+      title: 'Watchdog',
       theme: ThemeData(
         primaryColor: const Color(0xFFFFECD1),
         scaffoldBackgroundColor: const Color(0xFFFAFAFA),
@@ -48,9 +49,8 @@ class MyApp extends StatelessWidget {
         '/register': (context) => RegisterPage(),
         '/login': (context) => LoginPage(),
         '/home': (context) => HomePage(),
+        '/devices': (context) => HomePage(),
         '/video': (context) => VideoPage(),
-        '/video/full-mode': (context) => FullscreenVideoPage(),
-        '/tests': (context) => TestPage(),
       },
     );
   }

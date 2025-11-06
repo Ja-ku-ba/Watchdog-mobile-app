@@ -1,14 +1,13 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:intl/intl.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:watchdog/layouts/base/loged_in_layout.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart' as mk_video;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:watchdog/models/video.dart';
-import 'package:watchdog/components/loading.dart';
 
 class VideoPage extends StatelessWidget {
   const VideoPage({super.key});
@@ -35,11 +34,7 @@ class VideoPage extends StatelessWidget {
     return AppLayout(
       child: SafeArea(
         child: Column(
-          children: [
-            Expanded(
-              child: VideoStreamer(videoObj: video),
-            ),
-          ],
+          children: [Expanded(child: VideoStreamer(videoObj: video))],
         ),
       ),
     );
@@ -57,29 +52,43 @@ class VideoStreamer extends StatefulWidget {
 
 class _VideoStreamerState extends State<VideoStreamer> {
   late Video videoObj;
-  VideoPlayerController? _controller;
-  String _errorMessage = '';
-  bool _isLoading = true;
+  Player? _player;
+  mk_video.VideoController? _controller;
   bool _showControls = true;
+  bool _isLoading = true;
+  String vpnRtspUrl = '';
+  String? _errorMessage;
   Timer? _hideTimer;
-  Timer? _bufferCheckTimer;
-  Duration _lastPosition = Duration.zero;
-  int _bufferCheckCount = 0;
-  static final String baseUrl = dotenv.env['BASE_URL']!;
 
   @override
   void initState() {
     super.initState();
     videoObj = widget.videoObj;
+    vpnRtspUrl = videoObj.url;
+    _initializePlayer();
+  }
+
+  void _initializePlayer() {
+    _disposePlayer();
+
+    _player = Player(
+      configuration: PlayerConfiguration(
+        logLevel: MPVLogLevel.debug,
+        vo: 'mediacodec_embed',
+        bufferSize: 32 * 1024 * 1024,
+      ),
+    );
+
+    _controller = mk_video.VideoController(_player!);
     _initializeVideoPlayer();
   }
 
   Future<void> _initializeVideoPlayer() async {
-    if (!mounted) return;
+    if (!mounted || _player == null) return;
 
     setState(() {
       _isLoading = true;
-      _errorMessage = '';
+      _errorMessage = null;
     });
 
     try {
@@ -90,84 +99,44 @@ class _VideoStreamerState extends State<VideoStreamer> {
         throw Exception('Brak tokenu autoryzacji');
       }
 
-      await _controller?.dispose();
-
-      _controller = VideoPlayerController.networkUrl(
-        Uri.parse('${baseUrl}/videos/${videoObj.hash}'),
-        httpHeaders: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'video/*',
+      final rtspUrl = vpnRtspUrl;
+      final media = Media(
+        rtspUrl,
+        extras: {
+          'rtsp_transport': 'tcp',
+          'network-caching': '2000',
+          'rtsp-timeout': '10',
         },
       );
-      VideoPlayerManager().registerController(_controller!);
 
-      _controller!.addListener(_videoPlayerListener);
-
-      await _controller!.initialize();
+      await _player!
+          .open(media, play: true)
+          .timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw TimeoutException(
+            'Przekroczono czas oczekiwania na połączenie',
+          );
+        },
+      );
 
       if (mounted) {
-        setState(() => _isLoading = false);
-        await _controller!.play();
-        _startBufferMonitor();
+        setState(() {
+          _isLoading = false;
+        });
       }
-    } on SocketException catch (e) {
-      _handleError('Błąd połączenia sieciowego: ${e.message}');
-    } on FormatException catch (e) {
-      _handleError('Nieprawidłowy format video: ${e.message}');
     } catch (error) {
       _handleError('Nie udało się załadować wideo: $error');
     }
   }
 
-  void _videoPlayerListener() {
-    if (_controller == null) return;
-    if (mounted) setState(() {});
-    final value = _controller!.value;
-
-    if (value.hasError && mounted) {
-      _handleError('Błąd odtwarzania: ${value.errorDescription ?? 'Nieznany błąd'}');
-    }
-  }
-
   void _handleError(String message) {
-    if (!mounted) return;
-
-    setState(() {
-      _isLoading = false;
-      _errorMessage = message;
-    });
-
-    _bufferCheckTimer?.cancel();
-  }
-
-  void _startBufferMonitor() {
-    _bufferCheckTimer?.cancel();
-    _bufferCheckCount = 0;
-
-    _bufferCheckTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (_controller == null || !_controller!.value.isInitialized || !mounted) {
-        timer.cancel();
-        return;
-      }
-
-      final currentValue = _controller!.value;
-      final currentPos = currentValue.position;
-
-      if (currentValue.isPlaying && currentPos == _lastPosition) {
-        _bufferCheckCount++;
-
-        if (_bufferCheckCount >= 3 && !_isLoading) {
-          setState(() => _isLoading = true);
-        }
-      } else {
-        _bufferCheckCount = 0;
-        _lastPosition = currentPos;
-
-        if (_isLoading && currentValue.isPlaying) {
-          setState(() => _isLoading = false);
-        }
-      }
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = message;
+      });
+    }
   }
 
   void _toggleControls() {
@@ -195,127 +164,29 @@ class _VideoStreamerState extends State<VideoStreamer> {
     });
   }
 
-  void _seekVideo(Duration offset) {
-    if (_controller == null || !_controller!.value.isInitialized) return;
-
-    final currentPosition = _controller!.value.position;
-    final duration = _controller!.value.duration;
-    final newPosition = currentPosition + offset;
-
-    Duration targetPosition;
-    if (newPosition.isNegative) {
-      targetPosition = Duration.zero;
-    } else if (newPosition > duration) {
-      targetPosition = duration;
-    } else {
-      targetPosition = newPosition;
-    }
-
-    _controller!.seekTo(targetPosition);
-  }
-
   String formatDate(DateTime date) {
     return DateFormat("HH:mm, dd.MM.yyyy").format(date);
   }
 
-  String formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
-    final seconds = duration.inSeconds.remainder(60);
-
-    if (hours > 0) {
-      return '${twoDigits(hours)}h ${twoDigits(minutes)}min ${twoDigits(seconds)}s';
-    } else if (minutes > 0) {
-      return '${twoDigits(minutes)}min ${twoDigits(seconds)}s';
-    } else {
-      return '${twoDigits(seconds)}s';
-    }
+  Future<void> _retryConnection() async {
+    _initializePlayer();
   }
 
-  void _togglePlayPause() {
-    if (_controller == null || !_controller!.value.isInitialized) return;
-
-    if (_controller!.value.isPlaying) {
-      _controller!.pause();
-    } else {
-      _controller!.play();
-    }
+  void _disposePlayer() {
+    _hideTimer?.cancel();
+    _player?.dispose();
+    _player = null;
+    _controller = null;
   }
 
   @override
   void dispose() {
-    _hideTimer?.cancel();
-    _bufferCheckTimer?.cancel();
-
-    if (_controller != null) {
-      VideoPlayerManager().unregisterController(_controller!);
-      _controller!.removeListener(_videoPlayerListener);
-      _controller!.pause();
-      _controller!.dispose();
-    }
+    _disposePlayer();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading && _controller == null) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            LoadingCircle(size: 45),
-            SizedBox(height: 16),
-            Text(
-              'Ładowanie nagrania...',
-              style: TextStyle(color: Colors.black),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_errorMessage.isNotEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, color: Colors.red, size: 64),
-              const SizedBox(height: 16),
-              const Text(
-                'Błąd ładowania wideo',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _errorMessage,
-                style: const TextStyle(color: Colors.black87),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _initializeVideoPlayer,
-                child: const Text('Spróbuj ponownie'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (_controller == null || !_controller!.value.isInitialized) {
-      return const Center(
-        child: LoadingCircle(size: 45),
-      );
-    }
-
     return Column(
       children: [
         GestureDetector(
@@ -325,139 +196,79 @@ class _VideoStreamerState extends State<VideoStreamer> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                AspectRatio(
-                  aspectRatio: _controller!.value.aspectRatio,
-                  child: VideoPlayer(_controller!),
-                ),
-
-                if (_isLoading)
-                  const LoadingCircle(size: 50),
-
-                if (_showControls)
-                  Positioned(
-                    bottom: 10,
-                    left: 10,
-                    right: 10,
-                    child: AnimatedOpacity(
-                      opacity: _showControls ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 300),
+                SizedBox(
+                  width: double.infinity,
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: _isLoading
+                        ? const Center(
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Stack(
-                            children: [
-                              Align(
-                                alignment: Alignment.center,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      onPressed: () => _seekVideo(const Duration(seconds: -10)),
-                                      icon: const Icon(Icons.replay_10, color: Colors.white, size: 32),
-                                    ),
-                                    IconButton(
-                                      // onPressed: _togglePlayPause,
-                                      onPressed: () => {
-                                        _controller!.value.isPlaying ? _controller!.pause() : _controller!.play()
-                                      },
-                                      icon: Icon(
-                                        _controller!.value.isPlaying
-                                            ? Icons.pause_circle_filled
-                                            : Icons.play_circle_filled,
-                                        color: Colors.white,
-                                        size: 48,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      onPressed: () => _seekVideo(const Duration(seconds: 10)),
-                                      icon: const Icon(Icons.forward_10, color: Colors.white, size: 32),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              Container(
-                                padding: const EdgeInsets.only(top: 10),
-                                child: Align(
-                                  alignment: Alignment.centerRight,
-                                  child: IconButton(
-                                    onPressed: () {
-                                      if (_controller != null && _controller!.value.isInitialized) {
-                                        Navigator.of(context).pushNamed(
-                                          '/video/full-mode',
-                                          arguments: {'controller': _controller},
-                                        );
-                                      }
-                                    },
-                                    icon: const Icon(
-                                      Icons.fullscreen,
-                                      color: Colors.white,
-                                      size: 32,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          VideoProgressIndicator(
-                            _controller!,
-                            allowScrubbing: true,
-                            colors: const VideoProgressColors(
-                              playedColor: Colors.red,
-                              bufferedColor: Colors.grey,
-                              backgroundColor: Colors.white30,
-                            ),
+                          CircularProgressIndicator(color: Colors.white),
+                          SizedBox(height: 16),
+                          Text(
+                            'Ładowanie strumienia...',
+                            style: TextStyle(color: Colors.white),
                           ),
                         ],
                       ),
+                    )
+                        : _errorMessage != null
+                        ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _errorMessage!,
+                              style: const TextStyle(color: Colors.white),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: _retryConnection,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Spróbuj ponownie'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                        : _controller != null
+                        ? mk_video.Video(
+                      controller: _controller!,
+                      // Wymuś sprzętowe renderowanie
+                      fill: Colors.black,
+                    )
+                        : const Center(
+                      child: Text(
+                        'Brak kontrolera video',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ),
+                ),
               ],
             ),
           ),
         ),
 
-        Expanded(
-          child: ListView(
-            children: [
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.video_library),
-                  title: Text(
-                    '${formatDate(videoObj.recordedAt)}, ${videoObj.camera}',
-                  ),
-                  subtitle: Text(
-                    '${videoObj.type}, długość nagrania: ${formatDuration(videoObj.recordLength)}',
-                  ),
-                ),
-              ),
-              // const SizedBox(height: 8),
-              // Card(
-              //   child: ListTile(
-              //     leading: const Icon(Icons.info),
-              //     title: const Text('Informacje o video'),
-              //     subtitle: Text(
-              //       'Rozdzielczość: ${_controller?.value.size.width.toInt()}x${_controller?.value.size.height.toInt()}\n'
-              //           'Długość: ${_formatDuration(_controller?.value.duration ?? Duration.zero)}',
-              //     ),
-              //   ),
-              // ),
-            ],
+        if (videoObj.type != null && videoObj.type!.isNotEmpty)
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.video_library),
+              title: Text('${videoObj.recordedAt != null ? formatDate(videoObj.recordedAt!) : ''} ${videoObj.camera}'),              subtitle: Text(videoObj.type ?? 'brak danych'),
+            ),
           ),
-        ),
       ],
     );
-  }
-
-  String _formatDuration(Duration duration) {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
-    final seconds = duration.inSeconds.remainder(60);
-
-    if (hours > 0) {
-      return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-    } else {
-      return '$minutes:${seconds.toString().padLeft(2, '0')}';
-    }
   }
 }

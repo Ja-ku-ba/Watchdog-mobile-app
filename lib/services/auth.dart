@@ -11,7 +11,17 @@ import 'package:watchdog/main.dart';
 
 class AuthService {
   static const int accessTokenLifespanInMinutes = 60;
-  static final String baseUrl = dotenv.env['BASE_URL']!;
+  // static final String baseUrl = dotenv.env['BASE_URL']!;
+
+  static String? _baseUrl;
+
+  static String get baseUrl {
+    _baseUrl ??= dotenv.env['BASE_URL'];
+    if (_baseUrl == null || _baseUrl!.isEmpty) {
+      throw Exception('BASE_URL is not set or dotenv is not loaded');
+    }
+    return _baseUrl!;
+  }
 
   static Future<({bool success, String? error})> register(String email, String password, String username) async {
     try {

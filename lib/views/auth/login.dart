@@ -13,15 +13,17 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  static Future<void> myPrinter() async {
-    final prefs = await SharedPreferences.getInstance();
-  }
+  // static Future<void> myPrinter() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  // }
   bool _passwordHidden = false;
   @override
   void initState() {
+    super.initState();
     _passwordHidden = false;
-    myPrinter();
+    // myPrinter();
   }
+
   void _showPassword() {
     setState(() {
       _passwordHidden = !_passwordHidden;
@@ -32,8 +34,8 @@ class _LoginPageState extends State<LoginPage> {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
-    if (email.isEmpty | password.isEmpty) {
-      showErrorSnackBar(context, "Niepoprawny format adresu e-mail");
+    if (email.isEmpty || password.isEmpty) {
+      showErrorSnackBar(context, "Wypełnij wszystkie pola formularza");
       return;
     }
 
@@ -46,10 +48,11 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    ScaffoldMessenger.of(context).clearSnackBars();
     final (success: status, error: message) = await AuthService.login(email, password);
     if (status) {
       Navigator.of(context).pushReplacementNamed('/home');
-    } else if(!status && message != null) {
+    } else if(message != null) {
       showErrorSnackBar(context, message);
     } else {
       showErrorSnackBar(context, "Coś ewidentnie, poszło nie tak");

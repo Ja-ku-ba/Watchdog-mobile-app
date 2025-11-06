@@ -1,34 +1,30 @@
 class Video {
-  final String camera;
-  final String type;
-  final int importanceLevel;
-  final DateTime recordedAt;
-  final Duration recordLength;
-  final String hash;
+  final String url;                 // jedyne pole wymagane
+  final String? hash;
+  final String? camera;
+  final String? type;
+  final int? importanceLevel;
+  final DateTime? recordedAt;
 
-  Video({required this.hash, required this.camera, required this.type, required this.importanceLevel, required this.recordedAt, required this.recordLength});
+  Video({
+    required this.url,
+    this.hash,
+    this.camera,
+    this.type,
+    this.importanceLevel,
+    this.recordedAt,
+  });
 
   factory Video.fromJson(Map<String, dynamic> json) {
-    final recordLengthRaw = json['record_length'];
-    final recordLengthSeconds = recordLengthRaw is String
-        ? double.parse(recordLengthRaw).round()
-        : (recordLengthRaw as num).round();
-
     return Video(
+      url: json['url'],
       hash: json['hash'],
       camera: json['camera'],
       type: json['type'],
       importanceLevel: json['importance_level'],
-      recordedAt: DateTime.parse(json['recorded_at']),
-      recordLength: Duration(seconds: recordLengthSeconds),
-      // recordLength: Duration(
-      //   seconds: _parseDuration(json['record_length']),
-      // ),
+      recordedAt: json['recorded_at'] != null
+          ? DateTime.tryParse(json['recorded_at'])
+          : null,
     );
   }
-
-  // static int _parseDuration(String time) {
-  //   final parts = time.split(':').map(int.parse).toList();
-  //   return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  // }
 }
