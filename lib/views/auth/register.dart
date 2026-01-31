@@ -15,6 +15,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _passwordHidden = false;
   @override
   void initState() {
+    super.initState();
     _passwordHidden = false;
   }
   void _showPassword() {
@@ -84,9 +85,9 @@ class _RegisterPageState extends State<RegisterPage> {
     if (status) {
       Navigator.of(context).pushReplacementNamed('/home');
     } else if(!status && message != null) {
-      showErrorSnackBar(context, message);
+      showSnackBar(context, message);
     } else {
-      showErrorSnackBar(context, "Coś ewidentnie, poszło nie tak");
+      showSnackBar(context, "Coś poszło nie tak");
     }
   }
   @override
@@ -108,7 +109,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       vertical: 10,
                       horizontal: 10,
                     ),
-                    hintText: 'Nazwa użytkownika',
+                    hintText: 'nazwa użytkownika',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),

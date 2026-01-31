@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:watchdog/services/auth.dart';
 
 
-// const String baseUrl = 'http://192.168.0.22:8000/';
 String baseUrl = dotenv.env['BASE_URL']!;
 
 class RequestClient {
@@ -56,8 +54,20 @@ class RequestClient {
     return await _dio.post('$baseUrl$path', data: data);
   }
 
+  Future<Response> put(String path, {dynamic data}) async {
+    return await _dio.put('$baseUrl$path', data: data);
+  }
+
+  Future<Response> patch(String path, {dynamic data}) async {
+    return await _dio.patch('$baseUrl$path', data: data);
+  }
+
+  Future<Response> delete(String path) async {
+    return await _dio.delete('$baseUrl$path');
+  }
+
   Future<Uint8List> getImage(String path) async {
-    final prefs = await SharedPreferences.getInstance();
+    // final prefs = await SharedPreferences.getInstance();
     try {
       final response = await _dio.get(
         '$baseUrl$path',

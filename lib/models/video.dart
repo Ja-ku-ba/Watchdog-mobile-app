@@ -1,5 +1,5 @@
 class Video {
-  final String url;                 // jedyne pole wymagane
+  final String url;
   final String? hash;
   final String? camera;
   final String? type;

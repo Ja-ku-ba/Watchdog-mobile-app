@@ -265,7 +265,8 @@ class _VideoStreamerState extends State<VideoStreamer> {
           Card(
             child: ListTile(
               leading: const Icon(Icons.video_library),
-              title: Text('${videoObj.recordedAt != null ? formatDate(videoObj.recordedAt!) : ''} ${videoObj.camera}'),              subtitle: Text(videoObj.type ?? 'brak danych'),
+              title: Text('${formatDate(videoObj.recordedAt!)}'),
+              subtitle: Text('${videoObj.camera}'),
             ),
           ),
       ],

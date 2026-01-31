@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:watchdog/services/auth.dart';
 import 'package:watchdog/components/snackBars.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 
 class LoginPage extends StatefulWidget {
@@ -13,15 +12,13 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  // static Future<void> myPrinter() async {
-  //   final prefs = await SharedPreferences.getInstance();
-  // }
   bool _passwordHidden = false;
+  bool _isLoading = false;
   @override
   void initState() {
     super.initState();
     _passwordHidden = false;
-    // myPrinter();
+      _isLoading = false;
   }
 
   void _showPassword() {
@@ -31,11 +28,17 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void loginUser(BuildContext context) async {
+    setState(() {
+      _isLoading = true;
+    });
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      showErrorSnackBar(context, "Wypełnij wszystkie pola formularza");
+      showSnackBar(context, "Wypełnij wszystkie pola formularza");
+      setState(() {
+        _isLoading = false;
+      });
       return;
     }
 
@@ -44,7 +47,10 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     if (!emailRegex.hasMatch(email)) {
-      showErrorSnackBar(context, "Niepoprawny format adresu e-mail");
+      showSnackBar(context, "Niepoprawny format adresu e-mail");
+      setState(() {
+        _isLoading = false;
+      });
       return;
     }
 
@@ -53,10 +59,13 @@ class _LoginPageState extends State<LoginPage> {
     if (status) {
       Navigator.of(context).pushReplacementNamed('/home');
     } else if(message != null) {
-      showErrorSnackBar(context, message);
+      showSnackBar(context, message);
     } else {
-      showErrorSnackBar(context, "Coś ewidentnie, poszło nie tak");
+      showSnackBar(context, "Coś ewidentnie, poszło nie tak");
     }
+    setState(() {
+      _isLoading = false;
+    });
     return;
   }
 
@@ -118,13 +127,17 @@ class _LoginPageState extends State<LoginPage> {
                       borderRadius: BorderRadius.circular(10)
                     )
                   ),
-                  child: Text('Zaloguj'),
-                  onPressed: () => loginUser(context),
+                  child: _isLoading ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2)
+                  ) : Text('Zaloguj'),
+                  onPressed: () => _isLoading ? null : loginUser(context),
                 ),
                 SizedBox(height: 25),
                 Text("Nie masz konta?"),
                 TextButton(onPressed: () => {
-                    Navigator.of(context).pushReplacementNamed('/register')
+                    _isLoading ? null : Navigator.of(context).pushReplacementNamed('/register')
                   },
                   child: Text("Zarejestruj się")
                 )

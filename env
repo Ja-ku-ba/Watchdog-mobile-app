@@ -1,1 +1,2 @@
-BASE_URL=http://192.168.0.27:8000
+BASE_URL=https://vps-9c02e28c.vps.ovh.net
+DEVICE_AP_URL=http://10.42.0.1:5000

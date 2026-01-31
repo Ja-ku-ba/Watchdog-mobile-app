@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:watchdog/services/auth.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class AppLayout extends StatefulWidget {
   final Widget child;
@@ -14,30 +15,9 @@ class AppLayout extends StatefulWidget {
     AuthService.logout();
     Navigator.of(context).pushReplacementNamed('/login');
   }
-  static void showMesenger(BuildContext context) {
-
-    Navigator.of(context).pop();
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('Funkcja niedostępna'),
-            content: Text(
-              'Funkcja jeszcze nie gotowa, aplikacja skupia się na streamingu',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text('OK'),
-              ),
-            ],
-          ),
-    );
-  }
 }
 
 class _AppLayoutState extends State<AppLayout> with WidgetsBindingObserver {
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,27 +41,43 @@ class _AppLayoutState extends State<AppLayout> with WidgetsBindingObserver {
       ),
       body: Padding(padding: const EdgeInsets.all(16.0), child: widget.child),
       drawer: Drawer(
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return Column(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ColorFiltered(
+                colorFilter: const ColorFilter.mode(
+                  Colors.grey,
+                  BlendMode.srcIn,
+                ),
+                child: SvgPicture.asset(
+                  'assets/images/logo_berek_biale.svg',
+                  alignment: const Alignment(-0.85, 0),
+                  fit: BoxFit.fitHeight,
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Column(
                 children: [
                   Expanded(
                     child: ListView(
+                      padding: EdgeInsets.zero,
                       children: [
-                        DrawerHeader(
-                          child: Text(
-                            "Watchdog",
-                            style: TextStyle(
-                              fontSize: 25,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(10, 10),
-                                  blurRadius: 0,
-                                  color: Colors.grey.withOpacity(0.3),
+                        Container(
+                          margin: EdgeInsets.only(bottom: 60),
+                          padding: EdgeInsets.all(16),
+                          child: Stack(
+                            // alignment: Alignment.center,
+                            children: [
+                              Text(
+                                'Watchdog',
+                                style: TextStyle(
+                                  fontSize: 45,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w100,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                         ListTile(
@@ -97,6 +93,20 @@ class _AppLayoutState extends State<AppLayout> with WidgetsBindingObserver {
                             Navigator.pushNamed(context, '/devices');
                           },
                         ),
+                        Divider(height: 0, thickness: 1, color: Colors.grey),
+                        ListTile(
+                          title: Text("Powiadomienia"),
+                          onTap: () {
+                            Navigator.pushNamed(context, '/notifications');
+                          },
+                        ),
+                        Divider(height: 0, thickness: 1, color: Colors.grey),
+                        ListTile(
+                          title: Text("Zweryfikowani domownicy"),
+                          onTap: () {
+                            Navigator.pushNamed(context, '/verified_users');
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -108,9 +118,9 @@ class _AppLayoutState extends State<AppLayout> with WidgetsBindingObserver {
                     ),
                   ),
                 ],
-              );
-            },
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );
