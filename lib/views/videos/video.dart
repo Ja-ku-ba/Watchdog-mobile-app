@@ -59,6 +59,8 @@ class _VideoStreamerState extends State<VideoStreamer> {
   String vpnRtspUrl = '';
   String? _errorMessage;
   Timer? _hideTimer;
+  StreamSubscription<bool>? _playingSubscription;
+  StreamSubscription<String?>? _errorSubscription;
 
   @override
   void initState() {
@@ -73,13 +75,38 @@ class _VideoStreamerState extends State<VideoStreamer> {
 
     _player = Player(
       configuration: PlayerConfiguration(
-        logLevel: MPVLogLevel.debug,
+        logLevel: MPVLogLevel.error,
         vo: 'mediacodec_embed',
-        bufferSize: 32 * 1024 * 1024,
+        bufferSize: 8 * 1024 * 1024,
+        title: 'Watchdog',
+        osc: false,
       ),
     );
 
-    _controller = mk_video.VideoController(_player!);
+    _controller = mk_video.VideoController(
+      _player!,
+      configuration: const mk_video.VideoControllerConfiguration(
+        enableHardwareAcceleration: true,
+        androidAttachSurfaceAfterVideoParameters: false,
+      ),
+    );
+
+    _errorSubscription = _player!.stream.error.listen((error) {
+      if (mounted && error.isNotEmpty) {
+        _handleError('Błąd odtwarzania: $error');
+      }
+    });
+
+    // Monitor playback state
+    _playingSubscription = _player!.stream.playing.listen((isPlaying) {
+      if (mounted && isPlaying && _isLoading) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = null;
+        });
+      }
+    });
+
     _initializeVideoPlayer();
   }
 
@@ -104,27 +131,28 @@ class _VideoStreamerState extends State<VideoStreamer> {
         rtspUrl,
         extras: {
           'rtsp_transport': 'tcp',
-          'network-caching': '2000',
-          'rtsp-timeout': '10',
+          'network-caching': '500',
+          'rtsp-timeout': '5',
+          'framedrop': 'yes',
+          'vd-queue-max-samples': '8',
+          'vd-queue-max-bytes': '4194304',
+          'ad-queue-max-samples': '4',
+          'ad-queue-max-bytes': '1048576',
+          'hwdec': 'mediacodec',
+          'hwdec-codecs': 'h264,hevc,mpeg4,vp8,vp9',
+          'vd-lavc-skip-frame': 'nonref',
         },
       );
 
-      await _player!
-          .open(media, play: true)
-          .timeout(
-        const Duration(seconds: 15),
+      await _player!.open(media, play: true).timeout(
+        const Duration(seconds: 10),
         onTimeout: () {
-          throw TimeoutException(
-            'Przekroczono czas oczekiwania na połączenie',
-          );
+          throw TimeoutException('Przekroczono czas oczekiwania na połączenie');
         },
       );
 
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      await _player!.setRate(1.0);
+
     } catch (error) {
       _handleError('Nie udało się załadować wideo: $error');
     }
@@ -174,6 +202,8 @@ class _VideoStreamerState extends State<VideoStreamer> {
 
   void _disposePlayer() {
     _hideTimer?.cancel();
+    _playingSubscription?.cancel();
+    _errorSubscription?.cancel();
     _player?.dispose();
     _player = null;
     _controller = null;
@@ -245,8 +275,8 @@ class _VideoStreamerState extends State<VideoStreamer> {
                         : _controller != null
                         ? mk_video.Video(
                       controller: _controller!,
-                      // Wymuś sprzętowe renderowanie
                       fill: Colors.black,
+                      controls: null,
                     )
                         : const Center(
                       child: Text(
