@@ -1,16 +1,39 @@
-# watchdog
+# Watchdog
+## Aplikacja do zarządzania systemem monitoringu z detekcją twarzy, oparta o urządzenie monitorujące na RaspbberyPi 5
 
-A new Flutter project.
+Aplikacja składa się z 3 modułów
+- https://github.com/Ja-ku-ba/Watchdog-server
+- https://github.com/Ja-ku-ba/Watchdog-mobile-app
+- https://github.com/Ja-ku-ba/Watchdog-Raspberrypi
 
-## Getting Started
+Przed uruchomieniem upewnij się, że masz zainstalowane:
+- **Flutter SDK** (zalecana wersja: stable)
+- **Dart SDK** (instaluje się razem z Flutterem)
+- **Android Studio / VS Code** (z wtyczką Flutter & Dart)
+- Emulator Androida lub urządzenie fizyczne, minimalne wymagane SDK to 34
 
-This project is a starting point for a Flutter application.
+Sprawdź instalację:
+```bash
+flutter doctor
+```
 
-A few resources to get you started if this is your first Flutter project:
+git clone https://github.com/Ja-ku-ba/Watchdog-mobile-app
+cd nazwa-projektu
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Skopiuj plik env i nazwij go .env
+Dostosuj zmienne środowiskowe w pliku .env
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Pobierz zależności
+```bash
+flutter pub get
+```
+
+Uruchom projekt
+```bash
+flutter run
+```
+
+Wybuduj aplikację
+```bash
+flutter build apk
+```
