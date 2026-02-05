@@ -17,8 +17,11 @@ Sprawdź instalację:
 flutter doctor
 ```
 
+Pobierz projekt z git-a
+```bash
 git clone https://github.com/Ja-ku-ba/Watchdog-mobile-app
-cd nazwa-projektu
+cd Watchdog-mobile-app
+```
 
 Skopiuj plik env i nazwij go .env
 Dostosuj zmienne środowiskowe w pliku .env
