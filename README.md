@@ -40,3 +40,8 @@ Wybuduj aplikację
 ```bash
 flutter build apk
 ```
+
+Aby mieć łączność z urządzeniem monitorującym, musisz pobrać VPN na swoim telefonie
+https://play.google.com/store/apps/details?id=com.zerotier.one
+Utwórz konto w sieci, i zautoryzuj urządzenie:
+https://docs.zerotier.com/quickstart/
